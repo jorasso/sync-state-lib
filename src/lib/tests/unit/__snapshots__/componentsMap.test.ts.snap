@@ -1,0 +1,158 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`add component 1`] = `
+[
+  2,
+  0,
+  "d",
+  3,
+  [
+    1,
+    0,
+    "D",
+    1,
+    [
+      1,
+      2,
+      "subD",
+      1,
+      4,
+      0,
+      true,
+    ],
+  ],
+]
+`;
+
+exports[`complete state 1`] = `
+[
+  1,
+  3,
+  "a",
+  0,
+  [
+    1,
+    0,
+    "A",
+    1,
+    [
+      1,
+      2,
+      "subA",
+      1,
+      1,
+      0,
+      true,
+    ],
+  ],
+  "b",
+  1,
+  [
+    1,
+    0,
+    "B",
+    1,
+    [
+      1,
+      2,
+      "subB",
+      1,
+      2,
+      0,
+      false,
+    ],
+  ],
+  "c",
+  2,
+  [
+    1,
+    0,
+    "C",
+    1,
+    [
+      1,
+      2,
+      "subC",
+      1,
+      3,
+      0,
+      true,
+    ],
+  ],
+]
+`;
+
+exports[`delete component 1`] = `
+[
+  2,
+  1,
+  1,
+]
+`;
+
+exports[`reassign subcomponent 1`] = `
+[
+  2,
+  2,
+  1,
+  [
+    2,
+    1,
+    [
+      1,
+      2,
+      "Some Name",
+      1,
+      99,
+      0,
+      true,
+    ],
+  ],
+]
+`;
+
+exports[`replace component 1`] = `
+[
+  2,
+  3,
+  1,
+  [
+    1,
+    0,
+    "B2",
+    1,
+    [
+      1,
+      2,
+      "subB2",
+      1,
+      22,
+      0,
+      true,
+    ],
+  ],
+]
+`;
+
+exports[`update component 1`] = `
+[
+  2,
+  2,
+  1,
+  [
+    2,
+    0,
+    "B2",
+    1,
+    [
+      2,
+      2,
+      "subB2",
+      1,
+      22,
+      0,
+      true,
+    ],
+  ],
+]
+`;
