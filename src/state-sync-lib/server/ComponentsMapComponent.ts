@@ -1,18 +1,22 @@
-import { Component, ComponentChangeType } from "./Component"
+import { ComponentChangeType, MapOperations } from "../common-types/CommonTypes"
+import { Component } from "./Component"
 
-enum MapOperations {
-  add = 0,
-  remove = 1,
-  update = 2,
-  replace = 3,
-}
-
+// It's the map of the components, it is synced with the client's side version.
+// Supports operations like add, remove, update, replace.
 export class ComponentsMapComponent<T extends Component> extends Component {
   private map = new Map<string, T>()
 
   // Just to have the same signature as client's ComponentsMapComponent
   constructor(_: { new (): T }) {
     super()
+  }
+
+  forEach(cb: (element: T, key: string) => void) {
+    this.map.forEach(cb)
+  }
+
+  values() {
+    return this.map.values()
   }
 
   size() {
@@ -90,10 +94,16 @@ export class ComponentsMapComponent<T extends Component> extends Component {
     return state
   }
 
+  // Collects are changes from the map and from the components it contains.
   getRecentChanges() {
     const state: any[] = [ComponentChangeType.partial]
 
-    this.childComponentsChanges.forEach((change, numId) => {
+    this.changes.forEach((change, numId) => {
+      if (!change.isComponent) {
+        return
+      }
+
+      // If it changes from something to undefined, it means it was removed.
       if (change.to === undefined && change.from !== undefined) {
         state.push(MapOperations.remove)
         state.push(numId)
@@ -101,6 +111,7 @@ export class ComponentsMapComponent<T extends Component> extends Component {
         return
       }
 
+      // If it changes from undefined to something, it means it was added.
       if (change.from === undefined && change.to !== undefined) {
         state.push(MapOperations.add)
         state.push(change.meta.key)
@@ -109,6 +120,7 @@ export class ComponentsMapComponent<T extends Component> extends Component {
         return
       }
 
+      // If it changes from something to something, it means it was updated.
       if (change.from !== change.to) {
         state.push(MapOperations.replace)
         state.push(numId)
@@ -116,6 +128,7 @@ export class ComponentsMapComponent<T extends Component> extends Component {
         return
       }
 
+      // Otherwise, it was replaced.
       const recentChanges = change.to.getRecentChanges()
 
       if (recentChanges.length === 0) {

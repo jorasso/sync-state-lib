@@ -1,10 +1,8 @@
+import { ComponentChangeType, PrimitiveType } from "../common-types/CommonTypes"
 import { GetObjectProperty } from "../utils/GetObjectProperty"
+import { SetObjectProperty } from "../utils/SetObjectProperty"
 
-export enum ComponentChangeType {
-  "complete" = 1,
-  "partial" = 2,
-}
-
+// Keeps the change for a child component.
 interface ComponentChange {
   isComponent: true
   from: Component
@@ -12,20 +10,27 @@ interface ComponentChange {
   meta?: any
 }
 
+// Keeps the change for a primitive property.
 interface PrimitiveChange {
   isComponent: false
-  from: number | string | boolean
-  to: number | string | boolean
+  from: PrimitiveType
+  to: PrimitiveType
   meta?: any
 }
 
+// Component is the base class for all classes that are synced with the client.
+// It can contain primitive properties (number, string, boolean) and other sub-components.
 export class Component {
   readonly isComponent: boolean = true
 
-  static AllSyncedAlphabeticalOrder: string[] = []
-  static AllSynced: string[] = []
-  static SyncedComponents: string[] = []
-  static SyncedProperties: string[] = []
+  // When class is defined these are set by the decorator, so then we can create proper listeners for the properties and sub-components, when the instance is created.
+  static AllSynced = new Set<string>()
+  static SyncedComponents = new Set<string>()
+  static SyncedProperties = new Set<string>()
+
+  // All properties that are synced with the client in alphabetical order.
+  // We use this to get the numerical ids of the properties in the same order as we do on the client side.
+  static AllSyncedA_Z = new Array<string>()
 
   // This way we build a tree of components
   private parentComponent!: Component
@@ -40,19 +45,20 @@ export class Component {
   // Observed properties
   protected properties = new Map<string, number>()
 
-  protected primitivePropertiesChanges: Map<number, PrimitiveChange> = new Map()
-  protected childComponentsChanges: Map<number, ComponentChange> = new Map()
-
+  // All changes that have happened since the last time the last reset. They are in order of how the properties are defined in the class.
   protected changes: (PrimitiveChange | ComponentChange)[] = []
 
   protected lastNumId: number = 0
 
-  private updateReportedToParent: boolean = false
+  // Flag to avoid reporting the same change to the parent multiple times.
+  private updateReportedToParent: boolean
 
-  private numIdToOrder: number[] = []
-  private orderToNumId: number[] = []
-
-  private allPropertyKeys: string[] = []
+  // We keep the order of the properties in alphabetical order (numId), which is the same in the client.
+  // But we also keep the order of the properties in the order they are defined in the class (order).
+  // To quickly convert them we keep these two arrays.
+  // Definition order is needed to keep calling the listeners on the client the same way they were defined in the class.
+  protected numIdToOrder: number[] = []
+  protected orderToNumId: number[] = []
 
   getNumId() {
     const numId = this.lastNumId ?? 0
@@ -63,26 +69,39 @@ export class Component {
   }
 
   makeSynced() {
-    const properties: string[] =
-      GetObjectProperty(this.constructor, "SyncedProperties") ?? []
-    const components: string[] =
-      GetObjectProperty(this.constructor, "SyncedComponents") ?? []
-    const all: string[] = GetObjectProperty(this.constructor, "AllSynced") ?? []
-    const allOrder: string[] = [...all].sort()
+    const properties: Set<string> =
+      GetObjectProperty(this.constructor, "SyncedProperties") ??
+      new Set<string>()
+    const components: Set<string> =
+      GetObjectProperty(this.constructor, "SyncedComponents") ??
+      new Set<string>()
+    const all: Set<string> =
+      GetObjectProperty(this.constructor, "AllSynced") ?? new Set<string>()
 
-    this.allPropertyKeys = allOrder
+    let allA_Z: Array<string> =
+      GetObjectProperty(this.constructor, "AllSyncedA_Z") ?? new Array<string>()
 
+    // We want to do the operation just for the first instance of the class to avoid unnecessary work.
+    if (allA_Z.length < all.size) {
+      allA_Z = Array.from(all).sort()
+
+      SetObjectProperty(this.constructor, "AllSyncedA_Z", allA_Z)
+    }
+
+    // Now we create the listeners for the properties and sub-components.
     all.forEach((propertyKey) => {
-      const isProperty = properties.includes(propertyKey)
-      const numId = allOrder.indexOf(propertyKey)
+      const isProperty = properties.has(propertyKey)
+      const isComponent = components.has(propertyKey)
+
+      const numId = allA_Z.indexOf(propertyKey)
 
       const order = this.getNumId()
 
+      this.numIdToOrder[numId] = order
+      this.orderToNumId[order] = numId
+
       if (isProperty) {
         let value = GetObjectProperty(this, propertyKey)
-
-        this.numIdToOrder[numId] = order
-        this.orderToNumId[order] = numId
 
         this.properties.set(propertyKey, numId)
 
@@ -98,11 +117,8 @@ export class Component {
           enumerable: true,
           configurable: true,
         })
-      } else {
+      } else if (isComponent) {
         let component = GetObjectProperty(this, propertyKey)
-
-        this.numIdToOrder[numId] = order
-        this.orderToNumId[order] = numId
 
         this.components.set(component, numId)
 
@@ -136,68 +152,6 @@ export class Component {
     })
   }
 
-  makeSyncedBKP() {
-    const properties: string[] =
-      GetObjectProperty(this.constructor, "SyncedProperties") ?? []
-    const components: string[] =
-      GetObjectProperty(this.constructor, "SyncedComponents") ?? []
-    const all: string[] = GetObjectProperty(this.constructor, "AllSynced") ?? []
-
-    properties.forEach((propertyKey) => {
-      let value = GetObjectProperty(this, propertyKey)
-      let numId = this.getNumId()
-
-      this.properties.set(propertyKey, numId)
-
-      Object.defineProperty(this, propertyKey, {
-        get: () => {
-          return value
-        },
-        set: (newValue: any) => {
-          this.addPrimitivePropertyChange(numId, value, newValue)
-
-          value = newValue
-        },
-        enumerable: true,
-        configurable: true,
-      })
-    })
-
-    components.forEach((propertyKey) => {
-      let component = GetObjectProperty(this, propertyKey)
-
-      const numId = this.getNumId()
-      this.components.set(component, numId)
-
-      if (component?.isComponent) {
-        component.setParent(this, propertyKey, numId)
-      }
-
-      Object.defineProperty(this, propertyKey, {
-        get: () => {
-          return component
-        },
-        set: (newComponent: Component) => {
-          const numId = component?.parentNumId ?? this.getNumId()
-
-          if (component) {
-            component.dispose()
-          }
-
-          if (newComponent) {
-            newComponent.setParent(this, propertyKey, numId)
-          }
-
-          this.addChildComponentPropertyChange(numId, component, newComponent)
-
-          component = newComponent
-        },
-        enumerable: true,
-        configurable: true,
-      })
-    })
-  }
-
   // If the value of a property changes, or the property that holds a component is reassigned
   addPrimitivePropertyChange = (
     numId: number,
@@ -209,7 +163,9 @@ export class Component {
       return
     }
 
-    let change = this.primitivePropertiesChanges.get(numId)
+    const order = this.numIdToOrder[numId] ?? numId
+
+    let change = this.changes[order]
 
     if (change) {
       change.to = newValue
@@ -219,11 +175,8 @@ export class Component {
         from: oldValue,
         to: newValue,
       }
-
-      this.primitivePropertiesChanges.set(numId, change)
+      this.changes[order] = change
     }
-
-    this.changes[this.numIdToOrder[numId]] = change
 
     if (this.parentComponent && !this.updateReportedToParent) {
       this.updateReportedToParent = true
@@ -235,6 +188,7 @@ export class Component {
     }
   }
 
+  // When the change happens inside the component, we need to report it to the parent component.
   addChildComponentPropertyChange = (
     numId: number,
     currentComponent: Component,
@@ -249,7 +203,9 @@ export class Component {
       this.components.set(newComponent, numId)
     }
 
-    let change = this.childComponentsChanges.get(numId)
+    const order = this.numIdToOrder[numId] ?? numId
+
+    let change = this.changes[order]
 
     if (change) {
       change.to = newComponent
@@ -259,14 +215,12 @@ export class Component {
         from: currentComponent,
         to: newComponent,
       }
-      this.childComponentsChanges.set(numId, change)
+      this.changes[order] = change
     }
 
     if (meta) {
       change.meta = meta
     }
-
-    this.changes[this.numIdToOrder[numId]] = change
 
     if (this.parentComponent && !this.updateReportedToParent) {
       this.updateReportedToParent = true
@@ -274,9 +228,12 @@ export class Component {
     }
   }
 
+  // When the child component is overwritten with a new component, we need to report it to the parent component.
   addChildComponentUpdatedChange = (childComponent: Component) => {
     const numId = childComponent.getParentNumId()
-    let change = this.childComponentsChanges.get(numId)
+    const order = this.numIdToOrder[numId] ?? numId
+
+    let change = this.changes[order]
 
     if (change) {
       change.to = childComponent
@@ -286,10 +243,8 @@ export class Component {
         from: childComponent,
         to: childComponent,
       }
-      this.childComponentsChanges.set(numId, change)
+      this.changes[order] = change
     }
-
-    this.changes[this.numIdToOrder[numId]] = change
 
     if (this.parentComponent && !this.updateReportedToParent) {
       this.updateReportedToParent = true
@@ -325,11 +280,15 @@ export class Component {
     this.parentNumId = undefined
   }
 
+  // Create complete state of the component and all its children in form of hierarchical array.
   getCompleteState() {
     const state: any = [ComponentChangeType.complete]
 
-    this.orderToNumId.forEach((numId, order) => {
-      const propertyKey = this.allPropertyKeys[numId]
+    // Keeps the order of definitions of the properties and sub-components, so the client just processes the changes in the same order as they were defined in the class.
+    this.orderToNumId.forEach((numId) => {
+      const propertyKey = GetObjectProperty(this.constructor, "AllSyncedA_Z")[
+        numId
+      ]
 
       const isProperty = this.properties.has(propertyKey)
 
@@ -351,27 +310,7 @@ export class Component {
     return state
   }
 
-  getCompleteStateBKP() {
-    const state: any = [ComponentChangeType.complete]
-
-    state.push(this.properties.size)
-
-    this.properties.forEach((numId, key) => {
-      state.push(key)
-      state.push(numId)
-
-      state.push(GetObjectProperty(this, key))
-    })
-
-    this.components.forEach((numId, component) => {
-      state.push(component.getParentPropertyKey())
-      state.push(numId)
-      state.push(component.getCompleteState())
-    })
-
-    return state
-  }
-
+  // Gets the changes that have happened since the last time the changes were reset.
   getRecentChanges() {
     const changes: any = [ComponentChangeType.partial]
 
@@ -403,42 +342,10 @@ export class Component {
     return changes
   }
 
-  getRecentChangesBKP() {
-    const changes: any = [ComponentChangeType.partial]
-
-    this.primitivePropertiesChanges.forEach((change, numId) => {
-      if (change.from === change.to) {
-        return
-      }
-      changes.push(numId)
-      changes.push(change.to)
-    })
-
-    this.childComponentsChanges.forEach((change, numId) => {
-      if (change.from === change.to) {
-        const recentChanges = change.to.getRecentChanges()
-
-        // Don't include empty changes (only contains the type of change as partial, and no actual changes)
-        if (recentChanges.length > 1) {
-          changes.push(numId)
-          changes.push(change.to.getRecentChanges())
-        }
-      } else {
-        changes.push(numId)
-        changes.push(change.to.getCompleteState())
-      }
-    })
-
-    return changes
-  }
-
   resetRecentChanges() {
     this.changes = []
 
     this.updateReportedToParent = false
-
-    this.primitivePropertiesChanges.clear()
-    this.childComponentsChanges.clear()
 
     this.components.forEach((_, component) => {
       component.resetRecentChanges()

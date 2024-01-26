@@ -1,6 +1,6 @@
 import { expect, test, vi } from "vitest"
-import { ComponentsMapComponent as ComponentsMapComponentClient } from "../../client/ComponentsMapComponent"
-import { ComponentsMapComponent } from "../../server/ComponentsMapComponent"
+import { ComponentsMapComponent as ComponentsMapComponentClient } from "../../state-sync-lib/client/ComponentsMapComponent"
+import { ComponentsMapComponent } from "../../state-sync-lib/server/ComponentsMapComponent"
 import {
   ComplexComponent,
   ComplexComponentClient,

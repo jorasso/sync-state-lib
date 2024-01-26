@@ -62,10 +62,12 @@ exports[`complete state 1`] = `
         0,
         [
           1,
-          1,
+          2,
           "AA",
           0,
           true,
+          1,
+          0,
         ],
       ],
     ],

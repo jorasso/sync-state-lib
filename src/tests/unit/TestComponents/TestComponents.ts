@@ -1,10 +1,10 @@
-import { Component } from "../../../server/Component"
-import { Component as ClientComponent } from "../../../client/Component"
+import { Component } from "../../../state-sync-lib/server/Component"
+import { Component as ClientComponent } from "../../../state-sync-lib/client/Component"
 import {
   Synced,
   SyncedComponent,
   WithSynced,
-} from "../../../server/SyncedDecorator"
+} from "../../../state-sync-lib/decorators/SyncedDecorator"
 
 @WithSynced
 export class SimpleComponent extends Component {

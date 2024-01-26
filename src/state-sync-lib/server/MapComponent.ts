@@ -1,15 +1,21 @@
-import { Component, ComponentChangeType } from "./Component"
+import {
+  ComponentChangeType,
+  MapOperations,
+  PrimitiveType,
+} from "../common-types/CommonTypes"
+import { Component } from "./Component"
 
-type AllowedTypes = number | string | boolean
-
-enum MapOperations {
-  add = 0,
-  remove = 1,
-  update = 2,
-}
-
-export class MapComponent<T extends AllowedTypes> extends Component {
+// It's the map of the primitive values, and it's synced with the client's side version.
+export class MapComponent<T extends PrimitiveType> extends Component {
   private map = new Map<string, T>()
+
+  forEach(cb: (element: T, key: string) => void) {
+    this.map.forEach(cb)
+  }
+
+  values() {
+    return this.map.values()
+  }
 
   set(key: string, value: T) {
     this.addToProperties(key)
@@ -36,13 +42,13 @@ export class MapComponent<T extends AllowedTypes> extends Component {
     this.removeFromProperties(key)
   }
 
+  // Make sure the key is added to the properties map and it receives a numId which is used to identify the property in the state when sending it to the client.
   addToProperties = (key: string) => {
     if (this.map.has(key)) {
       return
     }
 
     const numId = this.getNumId()
-
     this.properties.set(key, numId)
   }
 
@@ -54,14 +60,16 @@ export class MapComponent<T extends AllowedTypes> extends Component {
     return this.map.size
   }
 
+  // The complete state containing all the properties and their values.
   getCompleteState() {
     const state: any = [ComponentChangeType.complete]
 
     state.push(this.map.size)
 
     this.map.forEach((value, key) => {
+      const numId = this.properties.get(key)
       state.push(key)
-      state.push(this.properties.get(key))
+      state.push(numId)
 
       state.push(value)
     })
@@ -69,14 +77,21 @@ export class MapComponent<T extends AllowedTypes> extends Component {
     return state
   }
 
+  // Recent changes are the changes that happened since the last time the state was sent to the client.
   getRecentChanges() {
     const state: any[] = [ComponentChangeType.partial]
 
-    this.primitivePropertiesChanges.forEach((change, numId) => {
+    this.changes.forEach((change, numId) => {
+      if (change.isComponent) {
+        return
+      }
+
+      // There wre no change
       if (change.from === change.to) {
         return
       }
 
+      // The property was removed
       if (change.to === undefined) {
         state.push(MapOperations.remove)
         state.push(numId)
@@ -84,6 +99,7 @@ export class MapComponent<T extends AllowedTypes> extends Component {
         return
       }
 
+      // The property was added
       if (change.from === undefined) {
         state.push(MapOperations.add)
         state.push(change.meta.key)
@@ -92,6 +108,7 @@ export class MapComponent<T extends AllowedTypes> extends Component {
         return
       }
 
+      // Otherwise, it was updated.
       state.push(MapOperations.update)
       state.push(numId)
       state.push(change.to)

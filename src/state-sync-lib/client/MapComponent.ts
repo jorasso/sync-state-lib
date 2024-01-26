@@ -1,15 +1,11 @@
-import { ComponentChangeType } from "../server/Component"
+import {
+  ComponentChangeType,
+  MapOperations,
+  PrimitiveType,
+} from "../common-types/CommonTypes"
 import { Component } from "./Component"
 
-type AllowedTypes = number | string | boolean
-
-enum MapOperations {
-  add = 0,
-  remove = 1,
-  update = 2,
-}
-
-export class MapComponent<T extends AllowedTypes> extends Component {
+export class MapComponent<T extends PrimitiveType> extends Component {
   map: Map<string, T> = new Map()
 
   onAddListeners: ((key: string, value: T) => void)[] = []
@@ -22,6 +18,14 @@ export class MapComponent<T extends AllowedTypes> extends Component {
 
   has(key: string) {
     return this.map.has(key)
+  }
+
+  forEach(cb: (element: T, key: string) => void) {
+    this.map.forEach(cb)
+  }
+
+  values() {
+    return this.map.values()
   }
 
   onAdd(listener: (key: string, value: T) => void) {

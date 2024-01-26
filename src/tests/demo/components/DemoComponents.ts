@@ -1,22 +1,23 @@
-import { ComponentsMapComponent as ComponentsMapComponentServer } from "../../../server/ComponentsMapComponent"
-import { Component as ComponentServer } from "../../../server/Component"
-import { MapComponent as MapComponentServer } from "../../../server/MapComponent"
+import { ComponentsMapComponent as ComponentsMapComponentServer } from "../../../state-sync-lib/server/ComponentsMapComponent"
+import { Component as ComponentServer } from "../../../state-sync-lib/server/Component"
+import { MapComponent as MapComponentServer } from "../../../state-sync-lib/server/MapComponent"
 
-import { ComponentsMapComponent as ComponentsMapComponentClient } from "../../../client/ComponentsMapComponent"
-import { Component as ComponentClient } from "../../../client/Component"
-import { MapComponent as MapComponentClient } from "../../../client/MapComponent"
+import { ComponentsMapComponent as ComponentsMapComponentClient } from "../../../state-sync-lib/client/ComponentsMapComponent"
+import { Component as ComponentClient } from "../../../state-sync-lib/client/Component"
+import { MapComponent as MapComponentClient } from "../../../state-sync-lib/client/MapComponent"
 
 import {
   Synced,
   SyncedComponent,
   WithSynced,
-} from "../../../server/SyncedDecorator"
+} from "../../../state-sync-lib/decorators/SyncedDecorator"
 
 // Define the components on the server
 @WithSynced
 export class ActiveSlotServer extends ComponentServer {
   @Synced() id: string = ""
   @Synced() active: boolean = false
+  @Synced() ammo: number = 0
 }
 
 @WithSynced
@@ -48,6 +49,7 @@ export class HeroServer extends ComponentServer {
 export class ActiveSlotClient extends ComponentClient {
   @Synced() id: string = ""
   @Synced() active: boolean = false
+  @Synced() ammo: number = 0
 }
 
 @WithSynced

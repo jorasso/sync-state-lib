@@ -1,12 +1,5 @@
-import { ComponentChangeType } from "../server/Component"
+import { ComponentChangeType, MapOperations } from "../common-types/CommonTypes"
 import { Component } from "./Component"
-
-enum MapOperations {
-  add = 0,
-  remove = 1,
-  update = 2,
-  replace = 3,
-}
 
 export class ComponentsMapComponent<T extends Component> extends Component {
   map: Map<string, T> = new Map()
@@ -66,6 +59,14 @@ export class ComponentsMapComponent<T extends Component> extends Component {
     }
   }
 
+  forEach(cb: (element: T, key: string) => void) {
+    this.map.forEach(cb)
+  }
+
+  values() {
+    return this.map.values()
+  }
+
   size() {
     return this.map.size
   }
@@ -80,13 +81,16 @@ export class ComponentsMapComponent<T extends Component> extends Component {
       const data = state[i + 2]
 
       const component = this.createInstance()
-      this.emitOnAdd(key, component)
+
       component.setParent(this, numId, key)
       component.loadCompleteState(data)
 
       this.components.set(numId, component)
 
       this.map.set(key, component)
+
+      this.emitOnAdd(key, component)
+      component.loadCompleteState(data)
     }
   }
 
@@ -110,12 +114,17 @@ export class ComponentsMapComponent<T extends Component> extends Component {
 
         const component = this.createInstance()
         component.setParent(this, numId, key)
+
+        // Load complete state first, so the component has proper data before we call onAdd callbacks
         component.loadCompleteState(data)
 
         this.components.set(numId, component)
         this.map.set(key, component)
 
         this.emitOnAdd(key, component)
+
+        // Load the component again, so it can fire all the callbacks
+        component.loadCompleteState(data)
 
         i += 3
       } else if (operation === MapOperations.replace) {

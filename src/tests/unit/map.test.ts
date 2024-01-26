@@ -1,6 +1,6 @@
 import { expect, test, vi } from "vitest"
-import { MapComponent as MapComponentClient } from "../../client/MapComponent"
-import { MapComponent } from "../../server/MapComponent"
+import { MapComponent as MapComponentClient } from "../../state-sync-lib/client/MapComponent"
+import { MapComponent } from "../../state-sync-lib/server/MapComponent"
 
 const GetData = () => {
   const client = new MapComponentClient<number>()

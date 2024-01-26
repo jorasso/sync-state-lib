@@ -1,5 +1,5 @@
-import { ComponentsMapComponent as ComponentsMapComponentServer } from "../../server/ComponentsMapComponent"
-import { ComponentsMapComponent as ComponentsMapComponentClient } from "../../client/ComponentsMapComponent"
+import { ComponentsMapComponent as ComponentsMapComponentServer } from "../../state-sync-lib/server/ComponentsMapComponent"
+import { ComponentsMapComponent as ComponentsMapComponentClient } from "../../state-sync-lib/client/ComponentsMapComponent"
 
 import {
   HeroServer,

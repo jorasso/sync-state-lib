@@ -3,16 +3,16 @@ export const Synced = () => {
   return function (target: any, propertyKey: string) {
     // Initialize the static property if it doesn't exist
     if (!target.constructor.hasOwnProperty("SyncedProperties")) {
-      target.constructor.SyncedProperties = []
+      target.constructor.SyncedProperties = new Set<string>()
     }
 
     if (!target.constructor.hasOwnProperty("AllSynced")) {
-      target.constructor.AllSynced = []
+      target.constructor.AllSynced = new Set<string>()
     }
 
     // Add the property key to the list of synced properties
-    target.constructor.SyncedProperties.push(propertyKey)
-    target.constructor.AllSynced.push(propertyKey)
+    target.constructor.SyncedProperties.add(propertyKey)
+    target.constructor.AllSynced.add(propertyKey)
   }
 }
 
@@ -21,16 +21,16 @@ export const SyncedComponent = () => {
   return function (target: any, propertyKey: string) {
     // Initialize the static property if it doesn't exist
     if (!target.constructor.hasOwnProperty("SyncedComponents")) {
-      target.constructor.SyncedComponents = []
+      target.constructor.SyncedComponents = new Set<string>()
     }
 
     if (!target.constructor.hasOwnProperty("AllSynced")) {
-      target.constructor.AllSynced = []
+      target.constructor.AllSynced = new Set<string>()
     }
 
     // Add the property key to the list of synced components
-    target.constructor.SyncedComponents.push(propertyKey)
-    target.constructor.AllSynced.push(propertyKey)
+    target.constructor.SyncedComponents.add(propertyKey)
+    target.constructor.AllSynced.add(propertyKey)
   }
 }
 
